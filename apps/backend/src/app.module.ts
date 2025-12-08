@@ -6,12 +6,11 @@ import { AuthModule } from './modules/auth/auth.module';
 import { OwnerModule } from './modules/owner/owner.module';
 import { UsersModule } from './modules/users/users.module';
 import { PropertyModule } from './modules/property/property.module';
-import { AuthService } from './auth/auth.service';
 
 
 @Module({
   imports: [PrismaModule, AuthModule, OwnerModule, UsersModule, PropertyModule],
   controllers: [AppController],
-  providers: [AppService, AuthService],
+  providers: [AppService],
 })
 export class AppModule {}
