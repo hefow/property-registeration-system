@@ -12,3 +12,105 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum UserRole {
+  PROPERTY_OWNER
+  GOVERNMENT_OFFICIAL
+  ADMIN
+}
+
+enum RegistrationStatus {
+  PENDING
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+}
+
+enum PropertyType {
+  RESIDENTIAL
+  COMMERCIAL
+  AGRICULTURAL
+  INDUSTRIAL
+  MIXED_USE
+}
+
+model User {
+  id                    String                 @id @default(uuid())
+  email                 String                 @unique
+  password              String
+  fullName              String
+  phoneNumber           String?
+  role                  UserRole               @default(PROPERTY_OWNER)
+  department            String?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  propertyRegistrations PropertyRegistration[]
+
+  @@map("users")
+}
+
+model PropertyRegistration {
+  id                  String              @id @default(uuid())
+  registrationNumber  String?             @unique
+  status              RegistrationStatus  @default(PENDING)
+  submittedAt         DateTime            @default(now())
+  reviewedAt          DateTime?
+  rejectionReason     String?
+  certificateNumber   String?             @unique
+  certificateIssuedAt DateTime?
+
+  userId              String
+  user                User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  propertyId          String              @unique
+  property            Property            @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  owners              PropertyOwner[]
+
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@map("property_registrations")
+}
+
+model Property {
+  id                    String                @id @default(uuid())
+  propertyType          PropertyType
+  address               String
+  city                  String
+  district              String
+  plotNumber            String                @unique
+  area                  Float
+  areaUnit              String                @default("sqm")
+  latitude              Float?
+  longitude             Float?
+  description           String?
+  landUse               String
+  boundaries            String?
+
+  propertyRegistration  PropertyRegistration?
+
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+
+  @@map("properties")
+}
+
+model PropertyOwner {
+  id                      String                @id @default(uuid())
+  fullName                String
+  nationalId              String
+  phoneNumber             String
+  email                   String?
+  address                 String
+  ownershipPercentage     Float                 @default(100)
+
+  propertyRegistrationId  String
+  propertyRegistration    PropertyRegistration  @relation(fields: [propertyRegistrationId], references: [id], onDelete: Cascade)
+
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+
+  @@map("property_owners")
+}
