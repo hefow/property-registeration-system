@@ -1,6 +1,8 @@
+export type UserRole = "PROPERTY_OWNER" | "GOVERNMENT_OFFICIAL" | "ADMIN";
+
 export type User = {
   id: string;
-  name: string;
+  fullName: string;
   email: string;
-  role: "owner" | "official" | "admin";
+  role: UserRole;
 };
