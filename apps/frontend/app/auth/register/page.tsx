@@ -1,29 +1,9 @@
-"use client"
+﻿"use client"
 
-import type React from "react"
-
-import { useState } from "react"
-
-interface FormData {
-  fullName: string
-  email: string
-  password: string
-  phone: string
-  role: string
-}
-
-interface FormErrors {
-  fullName?: string
-  email?: string
-  password?: string
-  role?: string
-}
-
-const fieldBase =
-  "w-full rounded-[14px] border-2 px-4 py-3 text-sm placeholder:text-[#9CA3AF] transition focus:outline-none dark:bg-white/90 dark:text-[#111827]"
-const fieldError = "border-[#EB5757] bg-[#FDEDEE] focus:border-[#EB5757] dark:border-[#F87171] dark:bg-[#FDEDEE]/90 dark:focus:border-[#F87171]"
-const fieldNormal = "border-[#E0E5EC] bg-[#F7F9FC] focus:border-[#00A86B] dark:border-[#334155] dark:bg-white/90 dark:focus:border-[#38BDF8]"
-const getFieldClasses = (hasError: boolean) => `${fieldBase} ${hasError ? fieldError : fieldNormal}`
+import Link from "next/link"
+import { FormEvent, useState } from "react"
+import { register } from "../../../services/auth.service"
+import type { AuthRole } from "../../../services/auth.service"
 
 const benefits = [
   "Automated validation keeps submissions audit-ready",
@@ -31,186 +11,250 @@ const benefits = [
   "Clear status updates for officials and owners",
 ]
 
+type RegisterFormState = {
+  fullName: string
+  email: string
+  password: string
+  phone: string
+  role: AuthRole | ""
+}
+
+const initialState: RegisterFormState = {
+  fullName: "",
+  email: "",
+  password: "",
+  phone: "",
+  role: "",
+}
+
+const validate = (values: RegisterFormState) => {
+  const errors: Partial<Record<keyof RegisterFormState, string>> = {}
+
+  if (!values.fullName.trim()) {
+    errors.fullName = "Full name is required."
+  }
+
+  if (!values.email.trim()) {
+    errors.email = "Official email is required."
+  } else if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(values.email)) {
+    errors.email = "Enter a valid email address."
+  }
+
+  if (!values.password.trim()) {
+    errors.password = "Password is required."
+  } else if (values.password.length < 8) {
+    errors.password = "Password must be 8 characters or more."
+  }
+
+  if (!values.role.trim()) {
+    errors.role = "Role is required."
+  }
+
+  return errors
+}
+
 export default function RegisterPage() {
-  const [formData, setFormData] = useState<FormData>({
-    fullName: "",
-    email: "",
-    password: "",
-    phone: "",
-    role: "",
-  })
-  const [errors, setErrors] = useState<FormErrors>({})
-  const [submitted, setSubmitted] = useState(false)
+  const [formState, setFormState] = useState(initialState)
+  const [errors, setErrors] = useState<Partial<Record<keyof RegisterFormState, string>>>({})
+  const [status, setStatus] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const validateEmail = (email: string): boolean => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-    return emailRegex.test(email)
+  const handleChange = (
+    event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
+    const { id, value } = event.target
+    setFormState((prev) => ({ ...prev, [id]: value }))
   }
 
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {}
-
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = "Full name is required"
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = "Email is required"
-    } else if (!validateEmail(formData.email)) {
-      newErrors.email = "Please enter a valid email"
-    }
-
-    if (!formData.password) {
-      newErrors.password = "Password is required"
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters"
-    }
-
-    if (!formData.role) {
-      newErrors.role = "Role is required"
-    }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }
-
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = event.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    if (errors[name as keyof FormErrors]) {
-      setErrors((prev) => ({ ...prev, [name]: undefined }))
-    }
-  }
-
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
-    if (!validateForm()) return
 
-    setSubmitted(true)
-    console.log("Form submitted:", formData)
-    setFormData({ fullName: "", email: "", password: "", phone: "", role: "" })
-    setTimeout(() => setSubmitted(false), 3000)
+    const validation = validate(formState)
+    if (Object.keys(validation).length) {
+      setErrors(validation)
+      setStatus("")
+      return
+    }
+
+    setIsSubmitting(true)
+    setErrors({})
+    setStatus("Registering your workspace...")
+
+    try {
+      const response = await register({
+        fullName: formState.fullName,
+        email: formState.email,
+        password: formState.password,
+        phoneNumber: formState.phone || undefined,
+        role: formState.role as AuthRole,
+      })
+
+      setStatus(response.message)
+      setFormState(initialState)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Registration failed."
+      setStatus(message)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-[#F7F9FC] text-[#1A1A1A] dark:bg-[#020617] dark:text-white">
-      <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-4 py-12 sm:px-6 lg:px-8">
-        <div className="pointer-events-none absolute top-8 right-4 h-32 w-32 rounded-full bg-[#00A86B]/10 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-10 left-10 h-32 w-32 rounded-full bg-[#0066CC]/10 blur-3xl" />
-
-        <div className="space-y-3 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.5em] text-[#00A86B] dark:text-[#8EE3FF]">Property registry</p>
-          <h1 className="text-4xl font-semibold leading-tight text-[#1A1A1A] dark:text-white">Join SafeRecord and launch with confidence</h1>
-          <p className="mx-auto max-w-2xl text-sm text-[#1A1A1A]/70 dark:text-[#CBD5F5]">
-            Create an account to collaborate with registrars, owners, and officials on every property filing. Every step remains transparent and auditable.
+    <main className="min-h-screen bg-[#F7F9FC]">
+      <section className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-16 lg:flex-row lg:items-center">
+        <div className="flex flex-1 flex-col gap-6 rounded-3xl bg-gradient-to-br from-[#001F54] to-[#0E4AA3] p-8 text-white shadow-2xl lg:p-12">
+          <p className="text-sm uppercase tracking-[0.3em] text-[#8AE4D7]">SDG-aligned flow</p>
+          <h1 className="text-3xl font-semibold leading-tight lg:text-4xl">
+            Register stakeholders, <span className="text-[#8AE4D7]">secure every deed</span>
+          </h1>
+          <p className="text-base text-[#E8F3FE]">
+            Create an account for owners and officials so every filing stays auditable and aligned with civic goals.
           </p>
-        </div>
-
-        <div className="rounded-[24px] border border-[#E0E5EC] bg-white/95 p-10 shadow-[0_30px_60px_rgba(15,23,42,0.15)] transition dark:bg-[#0C142B]/80 dark:border-[#1F2933] dark:shadow-[0_30px_60px_rgba(2,6,23,0.85)]">
-          <div className="grid gap-10 lg:grid-cols-[1.1fr,0.9fr]">
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <p className="text-sm font-semibold uppercase tracking-[0.4em] text-[#0066CC] dark:text-[#3EE8CC]">Account details</p>
-                <p className="text-sm text-[#1A1A1A]/70 dark:text-[#CBD5F5]">We only ask for the verified information that lets you access the registry.</p>
-              </div>
-
-              {submitted && (
-                <div className="rounded-[16px] border border-[#00A86B]/40 bg-[#00A86B]/10 px-4 py-3 text-sm font-semibold text-[#006633] dark:border-[#34D399]/50 dark:bg-[#0F2F1C]/80 dark:text-[#A7F3D0]">
-                  ✓ Registration recorded. Check your inbox for onboarding next steps.
-                </div>
-              )}
-
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="space-y-2">
-                  <label htmlFor="fullName" className="block text-sm font-semibold text-[#1A1A1A] dark:text-[#E2E8F0]">
-                    Full Name <span className="text-[#EB5757]">*</span>
-                  </label>
-                  <input id="fullName" name="fullName" type="text" value={formData.fullName} placeholder="Jordan Blake" onChange={handleChange} className={getFieldClasses(Boolean(errors.fullName))} />
-                  {errors.fullName && <p className="text-[12px] text-[#EB5757] font-medium">{errors.fullName}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="email" className="block text-sm font-semibold text-[#1A1A1A] dark:text-[#E2E8F0]">
-                    Official email <span className="text-[#EB5757]">*</span>
-                  </label>
-                  <input id="email" name="email" type="email" value={formData.email} placeholder="you@municipality.gov" onChange={handleChange} className={getFieldClasses(Boolean(errors.email))} />
-                  {errors.email && <p className="text-[12px] text-[#EB5757] font-medium">{errors.email}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="password" className="block text-sm font-semibold text-[#1A1A1A] dark:text-[#E2E8F0]">
-                    Password <span className="text-[#EB5757]">*</span>
-                  </label>
-                  <input id="password" name="password" type="password" value={formData.password} placeholder="Create a strong password" onChange={handleChange} className={getFieldClasses(Boolean(errors.password))} />
-                  <p className="text-[11px] text-[#1A1A1A]/70 dark:text-[#CBD5F5]">Minimum 6 characters</p>
-                  {errors.password && <p className="text-[12px] text-[#EB5757] font-medium">{errors.password}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="role" className="block text-sm font-semibold text-[#1A1A1A] dark:text-[#E2E8F0]">
-                    Role <span className="text-[#EB5757]">*</span>
-                  </label>
-                  <select
-                    id="role"
-                    name="role"
-                    value={formData.role}
-                    onChange={(event) => {
-                      setFormData((prev) => ({ ...prev, role: event.target.value }))
-                      if (errors.role) {
-                        setErrors((prev) => ({ ...prev, role: undefined }))
-                      }
-                    }}
-                    className={getFieldClasses(Boolean(errors.role))}
-                  >
-                    <option value="">Select a role</option>
-                    <option value="property_owner">Property Owner</option>
-                    <option value="government_official">Government Official</option>
-                    <option value="admin">Admin</option>
-                  </select>
-                  {errors.role && <p className="text-[12px] text-[#EB5757] font-medium">{errors.role}</p>}
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="phone" className="block text-sm font-semibold text-[#1A1A1A] dark:text-[#E2E8F0]">
-                    Phone Number <span className="text-[#1A1A1A]/60 dark:text-[#CBD5F5]">(optional)</span>
-                  </label>
-                  <input type="tel" id="phone" name="phone" value={formData.phone} onChange={handleChange} placeholder="+1 (555) 000-0000" className={getFieldClasses(false)} />
-                </div>
-
-                <button
-                  type="submit"
-                  className="w-full rounded-[16px] bg-gradient-to-r from-[#0066CC] to-[#00A86B] px-4 py-3 text-sm font-semibold uppercase tracking-[0.35em] text-white shadow-lg shadow-[#0066CC]/30 transition hover:shadow-xl"
-                >
-                  Create account
-                </button>
-              </form>
-
-              <p className="text-center text-sm text-[#1A1A1A]/70 dark:text-[#CBD5F5]">
-                Already have an account? {" "}
-                <a href="/auth/login" className="text-[#0066CC] underline-offset-2 hover:underline dark:text-[#7DD3FC]">
-                  Sign in
-                </a>
-              </p>
+          <div className="grid gap-6 sm:grid-cols-3">
+            <div>
+              <p className="text-3xl font-semibold">18k+</p>
+              <p className="text-sm text-[#D8E7FF]">Active submissions</p>
             </div>
-
-            <div className="space-y-6 rounded-[20px] border border-[#E0E5EC] bg-[#F7F9FC] p-6 shadow-inner dark:bg-[#020617] dark:border-[#0F172A] dark:shadow-[0_15px_40px_rgba(2,6,23,0.7)]">
-              <p className="text-xs font-semibold uppercase tracking-[0.4em] text-[#00A86B] dark:text-[#8EE3FF]">Why SafeRecord</p>
-              <ul className="space-y-4 text-sm text-[#1A1A1A]/70 dark:text-[#E0E7FF]">
-                {benefits.map((item) => (
-                  <li key={item} className="flex items-start gap-3">
-                    <span className="mt-1 h-2 w-2 rounded-full bg-[#00A86B]" />
-                    <span>{item}</span>
-                  </li>
-                ))}
-              </ul>
-              <div className="space-y-2 rounded-[16px] border border-[#E0E5EC] bg-white p-4 text-[11px] font-semibold uppercase tracking-[0.35em] text-[#0066CC] dark:border-[#2E4A6E] dark:bg-[#0B1224]/80 dark:text-[#7DD3FC]">
-                <p>SDG-ready verification</p>
-                <p>Government-grade encryption</p>
-              </div>
+            <div>
+              <p className="text-3xl font-semibold">320</p>
+              <p className="text-sm text-[#D8E7FF]">Municipal partners</p>
+            </div>
+            <div>
+              <p className="text-3xl font-semibold">98%</p>
+              <p className="text-sm text-[#D8E7FF]">Audit accuracy</p>
             </div>
           </div>
+          <div className="rounded-2xl border border-white/20 bg-white/5 p-4 text-sm text-[#C6DEFF]">
+            <p>
+              Invitations are encrypted, time-stamped, and routed through compliance-approved channels so every party can onboard confidently.
+            </p>
+          </div>
         </div>
-      </div>
-    </div>
+
+        <div className="flex-1 rounded-3xl bg-white p-10 shadow-[0_25px_60px_rgba(15,23,42,0.12)]">
+          <div className="mb-6">
+            <p className="text-sm uppercase tracking-[0.3em] text-[#00A86B]">Request access</p>
+            <h2 className="text-2xl font-semibold text-[#111827]">Create your SafeRecord hub</h2>
+            <p className="text-sm text-[#6B7280]">
+              Use your institutional email. Already part of the registry?{' '}
+              <Link href="/auth/login" className="font-semibold text-[#0066CC] underline-offset-2 hover:underline">
+                Sign in here
+              </Link>
+              .
+            </p>
+          </div>
+          <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+            <div>
+              <label htmlFor="fullName" className="mb-2 block text-sm font-medium text-[#111827]">
+                Full name
+              </label>
+              <input
+                id="fullName"
+                type="text"
+                value={formState.fullName}
+                onChange={handleChange}
+                className={`w-full rounded-2xl border px-4 py-3 text-sm focus:border-[#1DA2A7] focus:outline-none focus:ring-2 focus:ring-[#1DA2A7]/50 ${
+                  errors.fullName ? "border-[#F87171]" : "border-[#E5E7EB]"
+                }`}
+                placeholder="Jordan Blake"
+              />
+              {errors.fullName && <p className="mt-1 text-xs text-[#F87171]">{errors.fullName}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="email" className="mb-2 block text-sm font-medium text-[#111827]">
+                Institutional email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={formState.email}
+                onChange={handleChange}
+                className={`w-full rounded-2xl border px-4 py-3 text-sm focus:border-[#1DA2A7] focus:outline-none focus:ring-2 focus:ring-[#1DA2A7]/50 ${
+                  errors.email ? "border-[#F87171]" : "border-[#E5E7EB]"
+                }`}
+                placeholder="you@municipality.gov"
+              />
+              {errors.email && <p className="mt-1 text-xs text-[#F87171]">{errors.email}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="password" className="mb-2 block text-sm font-medium text-[#000000]">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={formState.password}
+                onChange={handleChange}
+                className={`w-full rounded-2xl border px-4 py-3 text-sm focus:border-[#1DA2A7] focus:outline-none focus:ring-2 focus:ring-[#1DA2A7]/50 ${
+                  errors.password ? "border-[#F87171]" : "border-[#E5E7EB]"
+                }`}
+                placeholder="Create a strong password"
+              />
+              {errors.password && <p className="mt-1 text-xs text-[#F87171]">{errors.password}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="role" className="mb-2 block text-sm font-medium text-[#111827]">
+                Role
+              </label>
+              <select
+                id="role"
+                value={formState.role}
+                onChange={handleChange}
+                className={`w-full rounded-2xl border px-4 py-3 text-sm focus:border-[#1DA2A7] focus:outline-none focus:ring-2 focus:ring-[#1DA2A7]/50 ${
+                  errors.role ? "border-[#F87171]" : "border-[#E5E7EB]"
+                }`}
+              >
+                <option value="">Select a role</option>
+                <option value="property_owner">Property Owner</option>
+                <option value="government_official">Government Official</option>
+                <option value="admin">Admin</option>
+              </select>
+              {errors.role && <p className="mt-1 text-xs text-[#F87171]">{errors.role}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="phone" className="mb-2 block text-sm font-medium text-[#111827]">
+                Phone (optional)
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                value={formState.phone}
+                onChange={handleChange}
+                className="w-full rounded-2xl border border-[#E5E7EB] px-4 py-3 text-sm focus:border-[#1DA2A7] focus:outline-none focus:ring-2 focus:ring-[#1DA2A7]/50"
+                placeholder="+1 (555) 000-0000"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className={`w-full rounded-2xl bg-gradient-to-r from-[#0066CC] to-[#00A86B] px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 ${
+                isSubmitting ? "opacity-70" : ""
+              }`}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Sending invite..." : "Request access"}
+            </button>
+          </form>
+
+          {status && <p className="mt-4 text-sm text-[#0066CC]">{status}</p>}
+
+          <div className="mt-8 rounded-2xl bg-[#F0F9F4] p-5 text-sm text-[#0F766E]">
+            <p className="font-semibold">Why partners trust SafeRecord</p>
+            <ul className="mt-3 space-y-2 text-[#134E4A]">
+              {benefits.map((benefit) => (
+                <li key={benefit} className="flex items-start gap-2">
+                  <span className="mt-1 h-2 w-2 rounded-full bg-[#00A86B]" />
+                  <span>{benefit}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
   )
 }

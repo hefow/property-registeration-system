@@ -1,11 +1,13 @@
 'use client';
 
 import { createContext, useContext } from "react";
+import type { LoginPayload, LoginResponse } from "../services/auth.service";
 import { User } from "../types/user.types";
 
 type AuthContextValue = {
   user: User | null;
-  signIn: () => Promise<void>;
+  accessToken: string | null;
+  signIn: (payload: LoginPayload) => Promise<LoginResponse>;
   signOut: () => void;
 };
 

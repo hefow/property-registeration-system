@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useState, useEffect, Suspense } from "react";
+import { useState } from "react";
 
 // Data
 const navLinks = [
@@ -215,7 +215,7 @@ const useDarkMode = () => {
   const [isDarkMode, setIsDarkMode] = useState<boolean | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  React.useEffect(() => {
     const initializeDarkMode = async () => {
       try {
         // Simulate async operation (e.g., fetching from localStorage or API)
@@ -242,22 +242,22 @@ const useDarkMode = () => {
     initializeDarkMode();
   }, []);
 
-  const toggleDarkMode = async () => {
+  async function toggleDarkMode() {
     if (isDarkMode === null) return;
-    
+
     setIsLoading(true);
     try {
       const newMode = !isDarkMode;
-      
+
       // Simulate async save operation
       await new Promise(resolve => setTimeout(resolve, 50));
-      
+
       // Save to localStorage
       localStorage.setItem('theme', newMode ? 'dark' : 'light');
-      
+
       // Update state
       setIsDarkMode(newMode);
-      
+
       // Update document class
       if (newMode) {
         document.documentElement.classList.add('dark');
@@ -269,7 +269,7 @@ const useDarkMode = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }
 
   return { isDarkMode, isLoading, toggleDarkMode };
 };
@@ -942,7 +942,7 @@ export default function Home() {
   const [scrolled, setScrolled] = useState(false);
   const { isDarkMode, isLoading, toggleDarkMode } = useDarkMode();
 
-  useEffect(() => {
+  React.useEffect(() => {
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
@@ -955,7 +955,7 @@ export default function Home() {
   }
 
   return (
-    <Suspense fallback={<LoadingSpinner />}>
+    <React.Suspense fallback={<LoadingSpinner />}>
       <div className={`min-h-screen transition-colors duration-300 ${isDarkMode ? 'dark bg-gray-900' : 'bg-white'}`}>
         <BackgroundElements darkMode={isDarkMode} />
         
@@ -978,6 +978,6 @@ export default function Home() {
           <CTASection />
         </div>
       </div>
-    </Suspense>
+    </React.Suspense>
   );
 }
