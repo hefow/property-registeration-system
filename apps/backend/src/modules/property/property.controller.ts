@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { PropertyService } from './property.service';
 import { get } from 'http';
 import { createPropertyDto } from './create.property.dto';
@@ -8,8 +8,14 @@ export class PropertyController {
     constructor(private propertyService: PropertyService){}
 
     @Get()
-    async getAllProperties(){
-        return this.propertyService.getAllProperties();
+    async getAllProperties(
+    @Query('page') page: string,
+    @Query('limit') limit: string
+    ) {
+    return this.propertyService.getAllProperties(
+        Number(page) || 1,
+        Number(limit) || 10
+    );
     }
 
     @Post()

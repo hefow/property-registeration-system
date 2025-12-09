@@ -6,10 +6,29 @@ import { createPropertyDto } from './create.property.dto';
 export class PropertyService {
     constructor(private prisma: PrismaService){}
 
-    async getAllProperties(){
-        const properties = await this.prisma.property.findMany()
-        return properties;
+    async getAllProperties(page: number, limit: number) {
+    const skip = (page - 1) * limit;
+
+    const [data, total] = await this.prisma.$transaction([
+        this.prisma.property.findMany({
+        skip,
+        take: limit,
+        orderBy: { createdAt: 'desc' }
+        }),
+        this.prisma.property.count()
+    ]);
+
+    return {
+        data,
+        meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        }
+    };
     }
+
 
     async createProperty(data: createPropertyDto){
         const property = await this.prisma.property.create({data})
